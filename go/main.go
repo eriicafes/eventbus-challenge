@@ -31,7 +31,12 @@ func NewEventBus() *EventBus {
 }
 
 func (e *EventBus) Run(fn func()) {
-	e.ch <- fn
+	waitCh := make(chan struct{})
+	e.ch <- func() {
+		fn()
+		close(waitCh)
+	}
+	<-waitCh
 }
 
 type Event[T any] struct {
@@ -63,12 +68,10 @@ func (e *Event[T]) Emit(data T) {
 	case PriorityLow:
 		// run low priority in batches of 20
 		var batch []Subscriber[T]
-		i := 0
-		ch := make(chan struct{})
 		for _, subscriber := range e.subscribers {
 			batch = append(batch, subscriber)
 			if len(batch) >= 20 {
-				i++
+				ch := make(chan struct{})
 				e.bus.Run(func() {
 					for _, subscriber := range batch {
 						subscriber(data)
@@ -76,7 +79,6 @@ func (e *Event[T]) Emit(data T) {
 					close(ch)
 				})
 				<-ch
-				ch = make(chan struct{})
 				batch = nil // reset batch
 			}
 		}
