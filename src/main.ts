@@ -79,11 +79,11 @@ export async function main() {
   }
 
   event2.emit("event2");
-  await delay(10); // 10 seconds later
+  await delay(10); // 10 seconds mark
   event1.emit("event1 (t=10)");
-  await delay(10); // 20 seconds later
-  event1.emit("event1 (t=30)");
-  await delay(30); // 30 seconds later
+  await delay(10); // 20 seconds mark
+  event1.emit("event1 (t=20)");
+  await delay(30); // 50 seconds mark
   event1.emit("event1 (t=50)");
 }
 main();
