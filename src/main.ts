@@ -18,18 +18,12 @@ class Event<T> {
     let batch = new Set<Subscriber<T>>();
     for (const subscriber of this.subscribers) {
       if (batch.add(subscriber).size >= 20) {
-        await this.runMicrotask(() => this.run(batch, data));
+        await this.run(batch, data);
         batch = new Set<Subscriber<T>>(); // reset batch
       }
     }
     // run remaining batch if any
-    if (batch.size) return await this.runMicrotask(() => this.run(batch, data));
-  }
-
-  private runMicrotask(fn: () => Promise<void>) {
-    const { promise, resolve } = Promise.withResolvers();
-    queueMicrotask(() => fn().then(resolve));
-    return promise;
+    if (batch.size) return await this.run(batch, data);
   }
 
   private run(subscribers: Set<Subscriber<T>>, data: T) {
@@ -43,8 +37,8 @@ class EventBus {
   private ready = Promise.resolve();
 
   public async run(fn: () => Promise<void>) {
-    const ready = this.ready;
-    this.ready = new Promise(async (res) => ready.then(fn).then(res));
+    // queue promises by waiting for the previous to complete execution
+    this.ready = this.ready.then(fn);
     return this.ready;
   }
 
