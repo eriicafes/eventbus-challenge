@@ -60,37 +60,30 @@ func (e *Event[T]) Emit(data T) {
 	switch e.priority {
 	case PriorityHigh:
 		// run high priority immediately
-		e.bus.Run(func() {
-			for _, subscriber := range e.subscribers {
-				subscriber(data)
-			}
-		})
+		e.run(e.subscribers, data)
 	case PriorityLow:
 		// run low priority in batches of 20
 		var batch []Subscriber[T]
 		for _, subscriber := range e.subscribers {
 			batch = append(batch, subscriber)
 			if len(batch) >= 20 {
-				ch := make(chan struct{})
-				e.bus.Run(func() {
-					for _, subscriber := range batch {
-						subscriber(data)
-					}
-					close(ch)
-				})
-				<-ch
+				e.run(batch, data)
 				batch = nil // reset batch
 			}
 		}
 		// run remaining items in batch if any
 		if len(batch) > 0 {
-			e.bus.Run(func() {
-				for _, subscriber := range batch {
-					subscriber(data)
-				}
-			})
+			e.run(batch, data)
 		}
 	}
+}
+
+func (e *Event[T]) run(subscribers []Subscriber[T], data T) {
+	e.bus.Run(func() {
+		for _, subscriber := range subscribers {
+			subscriber(data)
+		}
+	})
 }
 
 func main() {
