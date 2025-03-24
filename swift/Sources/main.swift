@@ -10,7 +10,7 @@ enum Priority {
     case high
 }
 
-actor Event<T: Sendable> {
+struct Event<T: Sendable> {
     private var bus: EventBus
     private var priority: Priority
     private var subscribers: [Subscriber<T>] = []
@@ -20,7 +20,7 @@ actor Event<T: Sendable> {
         self.priority = priority
     }
 
-    func subscribe(_ fn: @escaping Subscriber<T>) {
+    mutating func subscribe(_ fn: @escaping Subscriber<T>) {
         subscribers.append(fn)
     }
 
@@ -77,12 +77,12 @@ var event2 = Event<String>(bus: eventbus, priority: .low)
 
 let start = Date()
 for i in 1...10 {
-    await event1.subscribe { data in
+    event1.subscribe { data in
         try? await logger(start: start, event: data, subscriber: "subscriber\(i)")
     }
 }
 for i in 1...100 {
-    await event2.subscribe { data in
+    event2.subscribe { data in
         try? await logger(start: start, event: data, subscriber: "subscriber\(i)")
     }
 }
